@@ -1,0 +1,23 @@
+{
+  "training_mean_vs_zero_return": {
+    "mean_loss_difference": -1.8911553117456981e-07,
+    "statistic": -1.9951846432212657,
+    "p_value": 0.04602274531127314,
+    "n": 3807,
+    "hac_lags": 9
+  },
+  "ridge_vs_zero_return": {
+    "mean_loss_difference": 6.630804633791897e-06,
+    "statistic": 2.317588667021295,
+    "p_value": 0.020471686711547477,
+    "n": 3807,
+    "hac_lags": 9
+  },
+  "random_forest_vs_zero_return": {
+    "mean_loss_difference": 7.228543186967633e-06,
+    "statistic": 3.5664996191713296,
+    "p_value": 0.0003617813354129587,
+    "n": 3807,
+    "hac_lags": 9
+  }
+}
