@@ -16,7 +16,7 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from run_robust_experiments import build, bh
+from run_robust_experiments import build, bh, hac
 
 
 def feature_graph(train, features, maxlag=3, alpha=0.05):
@@ -145,7 +145,7 @@ def main():
         "no_graph_zero_message": np.zeros_like(A),
         "random_graph_ablation": random_A,
     }
-    results, tuning = [], {}
+    results, tuning, forecasts = [], {}, {}
     final_history = pd.concat([train, val])
     for name, matrix in architectures.items():
         x_train, x_val = message_features(X, matrix), message_features(V, matrix)
