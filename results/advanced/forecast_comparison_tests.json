@@ -30,14 +30,14 @@
     "p_value_holm": 0.3497291701580568
   },
   "random_forest_vs_zero_return": {
-    "mean_loss_difference_A_minus_B": 3.6996080534193914e-06,
-    "statistic": 2.7855746571915434,
-    "p_value": 0.0053697401600093266,
+    "mean_loss_difference_A_minus_B": 3.69960805341939e-06,
+    "statistic": 2.785574657191543,
+    "p_value": 0.005369740160009337,
     "n": 3807,
     "hac_lags": 10,
     "hac_estimator": "Bartlett/Newey-West with n/(n-1) correction",
     "reference_distribution": "Student-t, df=n-1",
-    "p_value_holm": 0.04295792128007461
+    "p_value_holm": 0.042957921280074696
   },
   "MLP_full_features_vs_zero_return": {
     "mean_loss_difference_A_minus_B": 5.642496732618064e-06,
