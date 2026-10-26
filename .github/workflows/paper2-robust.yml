@@ -5,6 +5,8 @@ on:
     paths:
       - 'scripts/run_robust_experiments.py'
       - 'scripts/test_graph_screen.py'
+      - 'scripts/run_graph_message_passing.py'
+      - 'scripts/test_graph_message_passing.py'
       - 'SP500.csv'
       - '.github/workflows/paper2-robust.yml'
   push:
@@ -12,6 +14,8 @@ on:
     paths:
       - 'scripts/run_robust_experiments.py'
       - 'scripts/test_graph_screen.py'
+      - 'scripts/run_graph_message_passing.py'
+      - 'scripts/test_graph_message_passing.py'
       - '.github/workflows/paper2-robust.yml'
       - 'SP500.csv'
       - '.github/workflows/paper2-robust.yml'
@@ -35,8 +39,12 @@ jobs:
         run: python -m pip install --upgrade pip pandas numpy scikit-learn scipy statsmodels matplotlib
       - name: Validate Granger graph screen on synthetic data
         run: python scripts/test_graph_screen.py
+      - name: Validate graph message-passing architecture
+        run: python scripts/test_graph_message_passing.py
       - name: Run validated experiments
         run: python scripts/run_robust_experiments.py --data SP500.csv --out results/advanced
+      - name: Run graph message-passing experiment and matched ablations
+        run: python scripts/run_graph_message_passing.py --data SP500.csv --out results/advanced/graph_message_passing
       - name: Commit experiment results
         run: |
           git config user.name "github-actions[bot]"
