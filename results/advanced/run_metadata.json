@@ -32,11 +32,25 @@
     "log_volume_change",
     "rsi14"
   ],
-  "graph_selected_features": [],
-  "graph_model_features": [
-    "ret_lag_1"
+  "graph_selected_features": [
+    "ret_lag_1",
+    "range_scaled",
+    "open_close_return",
+    "overnight_gap",
+    "volatility_5",
+    "volatility_20",
+    "volatility_60"
   ],
-  "graph_model_mode": "exploratory fallback: no FDR-significant features",
+  "graph_model_features": [
+    "ret_lag_1",
+    "range_scaled",
+    "open_close_return",
+    "overnight_gap",
+    "volatility_5",
+    "volatility_20",
+    "volatility_60"
+  ],
+  "graph_model_mode": "FDR-significant feature mask",
   "graph_semantics": "train-only Granger predictive-dependency screen; not structural causality",
   "selected_AR_lag": 5,
   "AR_validation_MSE": {
