@@ -1,0 +1,89 @@
+{
+  "python": "3.11.17",
+  "pandas": "3.1.0",
+  "numpy": "2.4.6",
+  "sklearn": "1.9.1",
+  "raw_rows": 24532,
+  "analysis_rows": 19031,
+  "train_rows": 11418,
+  "validation_rows": 3806,
+  "test_rows": 3807,
+  "first_date": "1950-01-04",
+  "last_date": "2025-08-28",
+  "train_end": "1995-05-25",
+  "validation_end": "2010-07-08",
+  "test_start": "2010-07-09",
+  "test_end": "2025-08-28",
+  "target": "log(Close[t+1])-log(Close[t])",
+  "forecast_origin": "after close t",
+  "features": [
+    "ret_lag_1",
+    "ret_lag_2",
+    "ret_lag_3",
+    "ret_lag_5",
+    "ret_lag_10",
+    "ret_lag_20",
+    "range_scaled",
+    "open_close_return",
+    "overnight_gap",
+    "volatility_5",
+    "volatility_20",
+    "volatility_60",
+    "log_volume_change",
+    "rsi14"
+  ],
+  "graph_selected_features": [
+    "ret_lag_1"
+  ],
+  "graph_semantics": "train-only Granger predictive-dependency screen; not structural causality",
+  "selected_AR_lag": 5,
+  "AR_validation_MSE": {
+    "1": 0.00016829787229452806,
+    "2": 0.00016829315746032594,
+    "5": 0.0001682917393983676,
+    "10": 0.0001682940513376112
+  },
+  "selected_MLP": {
+    "hidden": [
+      32,
+      16
+    ],
+    "alpha": 0.01,
+    "validation_MSE": 0.0028069732872831447
+  },
+  "MLP_validation_grid": [
+    {
+      "hidden": [
+        16
+      ],
+      "alpha": 0.001,
+      "validation_MSE": 0.006157335351792664
+    },
+    {
+      "hidden": [
+        32
+      ],
+      "alpha": 0.001,
+      "validation_MSE": 0.0063652403178006195
+    },
+    {
+      "hidden": [
+        32,
+        16
+      ],
+      "alpha": 0.001,
+      "validation_MSE": 0.00320386090984738
+    },
+    {
+      "hidden": [
+        32,
+        16
+      ],
+      "alpha": 0.01,
+      "validation_MSE": 0.0028069732872831447
+    }
+  ],
+  "test_used_for_tuning": false,
+  "directional_accuracy": "non-zero predictions only; coverage also reported",
+  "input_sha256": "f768ad2989514bf345a458f0a24d37617957f7efc8dbb17247f2779b40b20bea"
+}
