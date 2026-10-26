@@ -41,20 +41,48 @@ def bh(p):
   cur=min(cur,p[order[j]]*n/(j+1)); q[order[j]]=cur
  return np.minimum(q,1)
 
-def graph_screen(train,features):
+def graph_screen(train,features,maxlag=5):
+ """Train-only Granger screen with explicit diagnostics.
+
+ statsmodels 0.15 removed the legacy verbose argument. Passing it raised
+ TypeError, which the previous broad exception handler silently converted
+ into p=1 for every feature.
+ """
  from statsmodels.tsa.stattools import grangercausalitytests
  rows=[]
  for col in features:
+  err=""
   try:
+   pair=train[["target",col]].apply(pd.to_numeric,errors="coerce").to_numpy(dtype=float)
+   pair=pair[np.isfinite(pair).all(axis=1)]
+   if len(pair) <= 3*maxlag+10:
+    raise ValueError(f"insufficient finite observations: n={len(pair)}")
+   if np.std(pair[:,0]) < 1e-12 or np.std(pair[:,1]) < 1e-12:
+    raise ValueError("constant target or feature")
+   # statsmodels tests whether column 2 Granger-predicts column 1.
+   # Do not pass verbose: it was removed in statsmodels 0.15.
    with warnings.catch_warnings():
     warnings.simplefilter("ignore")
-    res=grangercausalitytests(train[["target",col]],maxlag=5,verbose=False)
-   pv=min(float(res[k][0]["ssr_ftest"][1]) for k in range(1,6))
-  except Exception: pv=1.
-  rows.append({"feature":col,"min_p":pv})
- q=bh([r["min_p"] for r in rows])
- for r,v in zip(rows,q): r["fdr_q"]=float(v); r["selected"]=bool(v<.05)
- # Do not force a non-significant feature to appear as a discovered graph edge.
+    res=grangercausalitytests(pair,maxlag=maxlag)
+   lag_p=[float(res[k][0]["ssr_ftest"][1]) for k in range(1,maxlag+1)]
+   if not np.isfinite(lag_p).all():
+    raise ValueError(f"non-finite p-values returned: {lag_p}")
+   raw_min=float(min(lag_p))
+   # Correct the within-feature search across lags before correcting across features.
+   lag_adjusted=min(1.0,raw_min*maxlag)
+  except Exception as exc:
+   raw_min=1.0
+   lag_adjusted=1.0
+   err=f"{type(exc).__name__}: {exc}"
+  rows.append({"feature":col,"min_p":raw_min,"lag_adjusted_p":lag_adjusted,"test_error":err})
+ q=bh([r["lag_adjusted_p"] for r in rows])
+ for r,v in zip(rows,q):
+  r["fdr_q"]=float(v)
+  r["selected"]=bool(not r["test_error"] and v<.05)
+ # Fail loudly if every test failed rather than writing a misleading all-null screen.
+ if rows and all(r["test_error"] for r in rows):
+  details="; ".join(f"{r['feature']}: {r['test_error']}" for r in rows[:3])
+  raise RuntimeError("All Granger tests failed. First errors: "+details)
  return pd.DataFrame(rows)
 
 def met(y,p):
