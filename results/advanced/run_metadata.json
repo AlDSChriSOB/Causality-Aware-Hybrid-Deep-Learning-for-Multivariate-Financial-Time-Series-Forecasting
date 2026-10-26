@@ -64,7 +64,7 @@
       16
     ],
     "alpha": 0.001,
-    "validation_MSE": 0.00018262869840524743
+    "validation_MSE": 0.00018262869840524745
   },
   "MLP_validation_grid": [
     {
@@ -72,14 +72,14 @@
         16
       ],
       "alpha": 0.001,
-      "validation_MSE": 0.00018262869840524743
+      "validation_MSE": 0.00018262869840524745
     },
     {
       "hidden": [
         32
       ],
       "alpha": 0.001,
-      "validation_MSE": 0.00018699170725816882
+      "validation_MSE": 0.0001869917072581688
     },
     {
       "hidden": [
@@ -87,7 +87,7 @@
         16
       ],
       "alpha": 0.001,
-      "validation_MSE": 0.00021993650854012316
+      "validation_MSE": 0.0002199365085401232
     },
     {
       "hidden": [
@@ -100,5 +100,7 @@
   ],
   "test_used_for_tuning": false,
   "directional_accuracy": "non-zero predictions only; coverage also reported",
+  "rolling_origin_graph_selection": "re-estimated from historical data available before each fold; exploratory fallback if no FDR-significant features",
+  "forecast_comparison_inference": "Bartlett/Newey-West HAC loss-differential tests, n/(n-1) correction, t(n-1) reference; primary bandwidth 10 and sensitivity bandwidths 0,5,10,20; Holm adjustment within each comparison family",
   "input_sha256": "f768ad2989514bf345a458f0a24d37617957f7efc8dbb17247f2779b40b20bea"
 }
