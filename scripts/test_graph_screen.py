@@ -1,7 +1,10 @@
 """Synthetic regression test for the train-only Granger feature screen."""
 import numpy as np
 import pandas as pd
-from scripts.run_robust_experiments import graph_screen
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from run_robust_experiments import graph_screen
 
 def main():
     rng=np.random.default_rng(20261026)
