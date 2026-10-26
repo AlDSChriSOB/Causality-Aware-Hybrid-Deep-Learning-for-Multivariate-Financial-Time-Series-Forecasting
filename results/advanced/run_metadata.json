@@ -64,7 +64,7 @@
       16
     ],
     "alpha": 0.001,
-    "validation_MSE": 0.00018262869840524745
+    "validation_MSE": 0.00018262869840524743
   },
   "MLP_validation_grid": [
     {
@@ -72,14 +72,14 @@
         16
       ],
       "alpha": 0.001,
-      "validation_MSE": 0.00018262869840524745
+      "validation_MSE": 0.00018262869840524743
     },
     {
       "hidden": [
         32
       ],
       "alpha": 0.001,
-      "validation_MSE": 0.0001869917072581688
+      "validation_MSE": 0.00018699170725816882
     },
     {
       "hidden": [
@@ -87,7 +87,7 @@
         16
       ],
       "alpha": 0.001,
-      "validation_MSE": 0.0002199365085401232
+      "validation_MSE": 0.00021993650854012316
     },
     {
       "hidden": [
