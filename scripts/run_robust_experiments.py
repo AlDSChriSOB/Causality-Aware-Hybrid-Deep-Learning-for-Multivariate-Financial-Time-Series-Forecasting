@@ -139,7 +139,7 @@ def main():
  rf=RandomForestRegressor(n_estimators=300,min_samples_leaf=10,max_features=.8,random_state=42,n_jobs=-1).fit(Xt,yt)
  ar=AutoReg(tv.target,lags=lag,trend="c").fit()
  rng=np.random.default_rng(42); rnd=list(rng.choice(feats,size=len(selected),replace=False)); rn=mlp(hidden,alpha).fit(Xt[rnd],ys_final)
- preds={"zero_return":np.zeros(len(te)),"training_mean":np.full(len(te),y.mean()),
+ preds={"zero_return":np.zeros(len(te)),"training_mean":np.full(len(te),yt.mean()),
  "AR_selected":np.asarray(ar.predict(start=len(tv),end=len(tv)+len(te)-1,dynamic=False)),
  "ridge":ridge.predict(T),"random_forest":rf.predict(T),
  "MLP_full_features":y_scaler_final.inverse_transform(full.predict(T).reshape(-1,1)).ravel(),
@@ -171,6 +171,13 @@ def main():
  pd.DataFrame(regs).to_csv(out/"regime_metrics.csv",index=False)
  tests={name+"_vs_zero_return":hac((ty-p)**2,(ty-preds["zero_return"])**2) for name,p in preds.items() if name!="zero_return"}
  tests["graph_masked_vs_full_MLP"]=hac((ty-preds["MLP_graph_masked"])**2,(ty-preds["MLP_full_features"])**2)
+ # Holm family-wise adjustment across the reported forecast comparisons.
+ valid=sorted([(name,val["p_value"]) for name,val in tests.items() if val.get("p_value") is not None],key=lambda z:z[1])
+ running=0.0; m=len(valid)
+ for rank,(name,pv) in enumerate(valid):
+  adjusted=min(1.0,(m-rank)*pv)
+  running=max(running,adjusted)
+  tests[name]["p_value_holm"]=running
  (out/"forecast_comparison_tests.json").write_text(json.dumps(tests,indent=2))
  # Figures
  fig,ax=plt.subplots(figsize=(10,5)); ax.plot(te.Date,ty,label="Actual",lw=.7); ax.plot(te.Date,preds["MLP_full_features"],label="MLP all features",lw=.7); ax.plot(te.Date,preds["MLP_graph_masked"],label="Graph-masked MLP",lw=.7); ax.set(title="S&P 500 next-day log-return forecasts",xlabel="Date",ylabel="Log return"); ax.legend(frameon=False); fig.tight_layout(); fig.savefig(out/"figure_test_forecasts.png",dpi=300); plt.close(fig)
@@ -190,7 +197,7 @@ Full-feature MLP RMSE: {fullrow['RMSE']:.7g}. Graph-masked MLP RMSE: {grow['RMSE
 Consult test_metrics.csv, test_forecasts.csv and forecast_comparison_tests.json for the complete measured results.
 
 ## Interpretation
-The graph screen is estimated only from training data, with Benjamini-Hochberg adjustment across features. FDR-significant selected features: {len(graph_selected)}. Graph-model mode: {graph_mode}. When no feature passes the adjusted threshold, the one-feature fallback is exploratory and must not be interpreted as a discovered graph edge. The screen tests Granger predictive dependence, not structural causal effects. Forecast comparison p-values use a HAC-normal approximation and are preliminary; multiple comparisons are not adjusted. Rolling-origin and calendar-regime results are robustness descriptions, not causal estimates. Directional accuracy excludes exactly zero predictions and reports coverage separately.
+The graph screen is estimated only from training data, with Benjamini-Hochberg adjustment across features. FDR-significant selected features: {len(graph_selected)}. Graph-model mode: {graph_mode}. When no feature passes the adjusted threshold, the one-feature fallback is exploratory and must not be interpreted as a discovered graph edge. The screen tests Granger predictive dependence, not structural causal effects. Forecast comparison p-values use a HAC-normal approximation; Holm family-wise adjusted p-values are also reported. These tests remain approximate and should be interpreted cautiously. Rolling-origin and calendar-regime results are robustness descriptions, not causal estimates. Directional accuracy excludes exactly zero predictions and reports coverage separately.
 
 ## Outputs
 test_metrics.csv; test_forecasts.csv; training_graph_edges.csv; neural_validation_tuning.csv; rolling_origin_metrics.csv; regime_metrics.csv; forecast_comparison_tests.json; three 300-dpi figures.
