@@ -32,9 +32,11 @@
     "log_volume_change",
     "rsi14"
   ],
-  "graph_selected_features": [
+  "graph_selected_features": [],
+  "graph_model_features": [
     "ret_lag_1"
   ],
+  "graph_model_mode": "exploratory fallback: no FDR-significant features",
   "graph_semantics": "train-only Granger predictive-dependency screen; not structural causality",
   "selected_AR_lag": 5,
   "AR_validation_MSE": {
@@ -45,11 +47,10 @@
   },
   "selected_MLP": {
     "hidden": [
-      32,
       16
     ],
-    "alpha": 0.01,
-    "validation_MSE": 0.0028069732872831447
+    "alpha": 0.001,
+    "validation_MSE": 0.00018262869840524745
   },
   "MLP_validation_grid": [
     {
@@ -57,14 +58,14 @@
         16
       ],
       "alpha": 0.001,
-      "validation_MSE": 0.006157335351792664
+      "validation_MSE": 0.00018262869840524745
     },
     {
       "hidden": [
         32
       ],
       "alpha": 0.001,
-      "validation_MSE": 0.0063652403178006195
+      "validation_MSE": 0.0001869917072581688
     },
     {
       "hidden": [
@@ -72,7 +73,7 @@
         16
       ],
       "alpha": 0.001,
-      "validation_MSE": 0.00320386090984738
+      "validation_MSE": 0.0002199365085401232
     },
     {
       "hidden": [
@@ -80,7 +81,7 @@
         16
       ],
       "alpha": 0.01,
-      "validation_MSE": 0.0028069732872831447
+      "validation_MSE": 0.00023341851113221
     }
   ],
   "test_used_for_tuning": false,

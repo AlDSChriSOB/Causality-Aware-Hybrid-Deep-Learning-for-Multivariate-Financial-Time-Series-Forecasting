@@ -7,51 +7,51 @@
     "hac_lags": 10
   },
   "AR_selected_vs_zero_return": {
-    "mean_loss_difference_A_minus_B": -1.7506268518447338e-07,
-    "statistic": -2.0426112110784933,
-    "p_value": 0.041090940415051014,
+    "mean_loss_difference_A_minus_B": -1.7506268518447335e-07,
+    "statistic": -2.042611211078493,
+    "p_value": 0.04109094041505106,
     "n": 3807,
     "hac_lags": 10
   },
   "ridge_vs_zero_return": {
-    "mean_loss_difference_A_minus_B": 6.630804633791892e-06,
-    "statistic": 2.2712562615351604,
-    "p_value": 0.02313146933272877,
+    "mean_loss_difference_A_minus_B": 6.630804633791897e-06,
+    "statistic": 2.271256261535161,
+    "p_value": 0.023131469332728742,
     "n": 3807,
     "hac_lags": 10
   },
   "random_forest_vs_zero_return": {
-    "mean_loss_difference_A_minus_B": 7.226972079320986e-06,
-    "statistic": 3.5231294101810815,
-    "p_value": 0.0004264830646752997,
+    "mean_loss_difference_A_minus_B": 7.228543186967632e-06,
+    "statistic": 3.523721498045321,
+    "p_value": 0.00042553126396884395,
     "n": 3807,
     "hac_lags": 10
   },
   "MLP_full_features_vs_zero_return": {
-    "mean_loss_difference_A_minus_B": 0.0019735987258333305,
-    "statistic": 5.8378198355122555,
-    "p_value": 5.288830169454959e-09,
+    "mean_loss_difference_A_minus_B": 1.1049583779742594e-05,
+    "statistic": 3.465758420436704,
+    "p_value": 0.0005287381318049605,
     "n": 3807,
     "hac_lags": 10
   },
   "MLP_graph_masked_vs_zero_return": {
-    "mean_loss_difference_A_minus_B": 0.00023123682123903203,
-    "statistic": 1.8979002854068565,
-    "p_value": 0.05770921877370804,
+    "mean_loss_difference_A_minus_B": 3.7474624633685597e-06,
+    "statistic": 2.976371588700838,
+    "p_value": 0.0029168120570083945,
     "n": 3807,
     "hac_lags": 10
   },
   "MLP_random_mask_ablation_vs_zero_return": {
-    "mean_loss_difference_A_minus_B": 0.0003969612856383548,
-    "statistic": 1.7575799802727228,
-    "p_value": 0.07881900217523757,
+    "mean_loss_difference_A_minus_B": 2.907883826081577e-06,
+    "statistic": 1.2439708724296596,
+    "p_value": 0.21351028328026023,
     "n": 3807,
     "hac_lags": 10
   },
   "graph_masked_vs_full_MLP": {
-    "mean_loss_difference_A_minus_B": -0.0017423619045942986,
-    "statistic": -6.953458871090474,
-    "p_value": 3.5643690274016667e-12,
+    "mean_loss_difference_A_minus_B": -7.302121316374033e-06,
+    "statistic": -2.385141895622658,
+    "p_value": 0.017072534875928184,
     "n": 3807,
     "hac_lags": 10
   }
