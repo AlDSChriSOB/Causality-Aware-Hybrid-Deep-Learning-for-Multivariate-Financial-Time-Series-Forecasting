@@ -1,4 +1,7 @@
-"""Leakage-aware Paper 2 experiments. Graph edges are train-only Granger predictive dependencies, not proof of structural causality."""
+"""Leakage-aware Paper 2 experiments. Graph edges are train-only Granger predictive dependencies, not proof of structural causality.
+
+Model selection uses chronological training/validation data. Final estimators are refit on
+train+validation, and the held-out test is evaluated once after refitting."""
 import argparse,json,platform,hashlib,warnings
 from pathlib import Path
 import numpy as np,pandas as pd,sklearn
@@ -127,17 +130,21 @@ def main():
  # minimum-q feature subset for diagnostic comparison; it is not a discovered causal graph.
  selected=graph_selected if graph_selected else [str(graph.sort_values(["fdr_q","min_p"]).iloc[0]["feature"])]
  graph_mode="FDR-significant feature mask" if graph_selected else "exploratory fallback: no FDR-significant features"
- full=mlp(hidden,alpha).fit(X,ys); gm=mlp(hidden,alpha).fit(X[selected],ys)
- ridge=make_pipeline(StandardScaler(),Ridge(alpha=1.)).fit(X,y)
- rf=RandomForestRegressor(n_estimators=300,min_samples_leaf=10,max_features=.8,random_state=42,n_jobs=-1).fit(X,y)
- tv=pd.concat([tr,va]); ar=AutoReg(tv.target,lags=lag,trend="c").fit()
- rng=np.random.default_rng(42); rnd=list(rng.choice(feats,size=len(selected),replace=False)); rn=mlp(hidden,alpha).fit(X[rnd],ys)
+ # Hyperparameters were selected on train/validation only. Refit final estimators
+ # on the combined pre-test history, with every learned scaler fitted on that history.
+ tv=pd.concat([tr,va]); Xt=tv[feats]; yt=tv.target.to_numpy(); T,ty=te[feats],te.target.to_numpy()
+ y_scaler_final=StandardScaler().fit(yt.reshape(-1,1)); ys_final=y_scaler_final.transform(yt.reshape(-1,1)).ravel()
+ full=mlp(hidden,alpha).fit(Xt,ys_final); gm=mlp(hidden,alpha).fit(Xt[selected],ys_final)
+ ridge=make_pipeline(StandardScaler(),Ridge(alpha=1.)).fit(Xt,yt)
+ rf=RandomForestRegressor(n_estimators=300,min_samples_leaf=10,max_features=.8,random_state=42,n_jobs=-1).fit(Xt,yt)
+ ar=AutoReg(tv.target,lags=lag,trend="c").fit()
+ rng=np.random.default_rng(42); rnd=list(rng.choice(feats,size=len(selected),replace=False)); rn=mlp(hidden,alpha).fit(Xt[rnd],ys_final)
  preds={"zero_return":np.zeros(len(te)),"training_mean":np.full(len(te),y.mean()),
  "AR_selected":np.asarray(ar.predict(start=len(tv),end=len(tv)+len(te)-1,dynamic=False)),
  "ridge":ridge.predict(T),"random_forest":rf.predict(T),
- "MLP_full_features":y_scaler.inverse_transform(full.predict(T).reshape(-1,1)).ravel(),
- "MLP_graph_masked":y_scaler.inverse_transform(gm.predict(T[selected]).reshape(-1,1)).ravel(),
- "MLP_random_mask_ablation":y_scaler.inverse_transform(rn.predict(T[rnd]).reshape(-1,1)).ravel()}
+ "MLP_full_features":y_scaler_final.inverse_transform(full.predict(T).reshape(-1,1)).ravel(),
+ "MLP_graph_masked":y_scaler_final.inverse_transform(gm.predict(T[selected]).reshape(-1,1)).ravel(),
+ "MLP_random_mask_ablation":y_scaler_final.inverse_transform(rn.predict(T[rnd]).reshape(-1,1)).ravel()}
  rows=[]
  for name,p in preds.items(): rows.append({"model":name,"features_used":len(selected) if "graph_masked" in name else len(rnd) if "random_mask" in name else len(feats),**met(ty,p)})
  pd.DataFrame(rows).to_csv(out/"test_metrics.csv",index=False); graph.to_csv(out/"training_graph_edges.csv",index=False); pd.DataFrame(tune).to_csv(out/"neural_validation_tuning.csv",index=False)
