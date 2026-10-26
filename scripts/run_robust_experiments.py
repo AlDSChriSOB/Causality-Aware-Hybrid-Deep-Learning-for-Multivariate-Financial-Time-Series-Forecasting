@@ -8,7 +8,7 @@ import numpy as np,pandas as pd,sklearn
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from scipy.stats import norm
+from scipy.stats import t as student_t
 from sklearn.metrics import mean_absolute_error,mean_squared_error,r2_score
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
@@ -96,11 +96,25 @@ def met(y,p):
  "directional_coverage":float(nz.mean()),"prediction_mean":float(p.mean()),"prediction_std":float(p.std())}
 
 def hac(a,b,L=10):
- d=np.asarray(a)-np.asarray(b); n=len(d); mu=float(d.mean()); z=d-mu; L=min(L,n-1); v=np.dot(z,z)/n
- for k in range(1,L+1): v+=2*(1-k/(L+1))*np.dot(z[k:],z[:-k])/n
- if v<=0: return {"mean_loss_difference_A_minus_B":mu,"p_value":None,"n":n}
- t=mu/np.sqrt(v/n)
- return {"mean_loss_difference_A_minus_B":mu,"statistic":float(t),"p_value":float(2*norm.sf(abs(t))),"n":n,"hac_lags":L}
+ """Two-sided HAC loss-differential test with Bartlett/Newey-West covariance.
+
+ Positive mean(A loss - B loss) means A has higher loss (B is better).
+ The t reference is a finite-sample diagnostic; inference remains approximate.
+ """
+ a=np.asarray(a,dtype=float); b=np.asarray(b,dtype=float)
+ if a.shape!=b.shape or a.ndim!=1: raise ValueError("Loss arrays must be same-length 1-D vectors")
+ d=a-b; d=d[np.isfinite(d)]; n=len(d)
+ if n<3: return {"mean_loss_difference_A_minus_B":float(np.mean(d)) if n else None,"statistic":None,"p_value":None,"n":n,"hac_lags":0}
+ mu=float(d.mean()); z=d-mu; L=max(0,min(int(L),n-1)); long_run=float(np.dot(z,z)/n)
+ for k in range(1,L+1):
+  long_run+=2*(1-k/(L+1))*float(np.dot(z[k:],z[:-k])/n)
+ if not np.isfinite(long_run) or long_run<=0:
+  return {"mean_loss_difference_A_minus_B":mu,"statistic":None,"p_value":None,"n":n,"hac_lags":L}
+ # Newey-West finite-sample correction for an intercept-only mean regression.
+ se=float(np.sqrt((long_run/n)*(n/(n-1))))
+ stat=mu/se if se>0 else None
+ p=float(2*student_t.sf(abs(stat),df=n-1)) if stat is not None else None
+ return {"mean_loss_difference_A_minus_B":mu,"statistic":float(stat) if stat is not None else None,"p_value":p,"n":n,"hac_lags":L,"hac_estimator":"Bartlett/Newey-West with n/(n-1) correction","reference_distribution":"Student-t, df=n-1"}
 
 def mlp(hidden,alpha):
  return make_pipeline(StandardScaler(),MLPRegressor(hidden_layer_sizes=hidden,alpha=alpha,max_iter=350,early_stopping=False,random_state=42,learning_rate_init=.001))
@@ -149,36 +163,50 @@ def main():
  for name,p in preds.items(): rows.append({"model":name,"features_used":len(selected) if "graph_masked" in name else len(rnd) if "random_mask" in name else len(feats),**met(ty,p)})
  pd.DataFrame(rows).to_csv(out/"test_metrics.csv",index=False); graph.to_csv(out/"training_graph_edges.csv",index=False); pd.DataFrame(tune).to_csv(out/"neural_validation_tuning.csv",index=False)
  fc=pd.DataFrame({"Date":te.Date,"actual_next_return":ty,**preds}); fc.to_csv(out/"test_forecasts.csv",index=False)
- # Expanding-window rolling-origin evaluation, fixed hyperparameters selected on initial validation.
- rolls=[]
+ # Expanding-window rolling-origin evaluation. Re-estimate the Granger screen
+ # using only history available before each fold. Hyperparameters remain fixed
+ # from the initial train/validation split and are not tuned on future fold data.
+ rolls=[]; rolling_graph=[]
  for fold,idx in enumerate(np.array_split(np.arange(j,n),a.rolling_folds),1):
   if not len(idx): continue
   hist=frame.iloc[:int(idx[0])]; block=frame.iloc[idx]; xx=hist[feats]; yy=hist.target.to_numpy(); xt=block[feats]; yt=block.target.to_numpy()
-  for name,cols in [("ridge",feats),("MLP_full_features",feats),("MLP_graph_masked",selected)]:
+  fold_graph=graph_screen(hist,feats)
+  fold_graph_selected=fold_graph.loc[fold_graph.selected,"feature"].tolist()
+  fold_cols=fold_graph_selected if fold_graph_selected else [str(fold_graph.sort_values(["fdr_q","min_p"]).iloc[0]["feature"])]
+  fold_mode="FDR-significant feature mask" if fold_graph_selected else "exploratory fallback: no FDR-significant features"
+  fold_graph.insert(0,"fold",fold); fold_graph["selected_for_model"]=fold_graph.feature.isin(fold_cols); fold_graph["graph_mode"]=fold_mode
+  rolling_graph.append(fold_graph)
+  for name,cols in [("ridge",feats),("MLP_full_features",feats),("MLP_graph_masked",fold_cols)]:
    model=make_pipeline(StandardScaler(),Ridge(alpha=1.)) if name=="ridge" else mlp(hidden,alpha)
    if name=="ridge":
     model.fit(xx[cols],yy); pp=model.predict(xt[cols])
    else:
     ys_fold=StandardScaler().fit(yy.reshape(-1,1)); model.fit(xx[cols],ys_fold.transform(yy.reshape(-1,1)).ravel())
     pp=ys_fold.inverse_transform(model.predict(xt[cols]).reshape(-1,1)).ravel()
-   rolls.append({"fold":fold,"start":str(block.Date.iloc[0].date()),"end":str(block.Date.iloc[-1].date()),"model":name,**met(yt,pp)})
+   rolls.append({"fold":fold,"start":str(block.Date.iloc[0].date()),"end":str(block.Date.iloc[-1].date()),"model":name,"features_used":len(cols),"graph_selected_count":len(fold_graph_selected) if name=="MLP_graph_masked" else None,"graph_mode":fold_mode if name=="MLP_graph_masked" else None,**met(yt,pp)})
  pd.DataFrame(rolls).to_csv(out/"rolling_origin_metrics.csv",index=False)
+ pd.concat(rolling_graph,ignore_index=True).to_csv(out/"rolling_origin_graph_screens.csv",index=False)
  regs=[]
  for start,end,label in [("2010-07-09","2019-12-31","pre-COVID"),("2020-01-01","2021-12-31","COVID-era"),("2022-01-01","2025-12-31","recent")]:
   mask=(te.Date>=start)&(te.Date<=end)
   if mask.sum()>=10:
    for name,p in preds.items(): regs.append({"regime":label,"start":start,"end":end,"model":name,**met(ty[mask],p[mask])})
  pd.DataFrame(regs).to_csv(out/"regime_metrics.csv",index=False)
- tests={name+"_vs_zero_return":hac((ty-p)**2,(ty-preds["zero_return"])**2) for name,p in preds.items() if name!="zero_return"}
- tests["graph_masked_vs_full_MLP"]=hac((ty-preds["MLP_graph_masked"])**2,(ty-preds["MLP_full_features"])**2)
- # Holm family-wise adjustment across the reported forecast comparisons.
- valid=sorted([(name,val["p_value"]) for name,val in tests.items() if val.get("p_value") is not None],key=lambda z:z[1])
- running=0.0; m=len(valid)
- for rank,(name,pv) in enumerate(valid):
-  adjusted=min(1.0,(m-rank)*pv)
-  running=max(running,adjusted)
-  tests[name]["p_value_holm"]=running
+ def loss_comparisons(L):
+  comparisons={name+"_vs_zero_return":hac((ty-p)**2,(ty-preds["zero_return"])**2,L=L) for name,p in preds.items() if name!="zero_return"}
+  comparisons["graph_masked_vs_full_MLP"]=hac((ty-preds["MLP_graph_masked"])**2,(ty-preds["MLP_full_features"])**2,L=L)
+  # Holm family-wise adjustment across this predeclared family of comparisons.
+  valid=sorted([(name,val["p_value"]) for name,val in comparisons.items() if val.get("p_value") is not None],key=lambda z:z[1])
+  running=0.0; m=len(valid)
+  for rank,(name,pv) in enumerate(valid):
+   adjusted=min(1.0,(m-rank)*pv)
+   running=max(running,adjusted)
+   comparisons[name]["p_value_holm"]=running
+  return comparisons
+ tests=loss_comparisons(10)
+ sensitivity={str(L):loss_comparisons(L) for L in [0,5,10,20]}
  (out/"forecast_comparison_tests.json").write_text(json.dumps(tests,indent=2))
+ (out/"forecast_comparison_hac_sensitivity.json").write_text(json.dumps({"description":"Sensitivity of squared-error loss comparisons to Bartlett/Newey-West HAC bandwidth. Holm adjustment is applied within the comparison family separately at each lag; lag 10 is the primary bandwidth.","primary_lag":10,"results_by_hac_lag":sensitivity},indent=2))
  # Figures
  fig,ax=plt.subplots(figsize=(10,5)); ax.plot(te.Date,ty,label="Actual",lw=.7); ax.plot(te.Date,preds["MLP_full_features"],label="MLP all features",lw=.7); ax.plot(te.Date,preds["MLP_graph_masked"],label="Graph-masked MLP",lw=.7); ax.set(title="S&P 500 next-day log-return forecasts",xlabel="Date",ylabel="Log return"); ax.legend(frameon=False); fig.tight_layout(); fig.savefig(out/"figure_test_forecasts.png",dpi=300); plt.close(fig)
  mr=pd.DataFrame(rows).sort_values("RMSE"); fig,ax=plt.subplots(figsize=(9,5)); ax.bar(mr.model,mr.RMSE); ax.set(title="Held-out forecast error",ylabel="RMSE",xlabel="Model"); ax.tick_params(axis="x",rotation=35); fig.tight_layout(); fig.savefig(out/"figure_rmse_comparison.png",dpi=300); plt.close(fig)
@@ -200,10 +228,10 @@ Consult test_metrics.csv, test_forecasts.csv and forecast_comparison_tests.json 
 The graph screen is estimated only from training data, with Benjamini-Hochberg adjustment across features. FDR-significant selected features: {len(graph_selected)}. Graph-model mode: {graph_mode}. When no feature passes the adjusted threshold, the one-feature fallback is exploratory and must not be interpreted as a discovered graph edge. The screen tests Granger predictive dependence, not structural causal effects. Forecast comparison p-values use a HAC-normal approximation; Holm family-wise adjusted p-values are also reported. These tests remain approximate and should be interpreted cautiously. Rolling-origin and calendar-regime results are robustness descriptions, not causal estimates. Directional accuracy excludes exactly zero predictions and reports coverage separately.
 
 ## Outputs
-test_metrics.csv; test_forecasts.csv; training_graph_edges.csv; neural_validation_tuning.csv; rolling_origin_metrics.csv; regime_metrics.csv; forecast_comparison_tests.json; three 300-dpi figures.
+test_metrics.csv; test_forecasts.csv; training_graph_edges.csv; neural_validation_tuning.csv; rolling_origin_metrics.csv; rolling_origin_graph_screens.csv; regime_metrics.csv; forecast_comparison_tests.json; forecast_comparison_hac_sensitivity.json; three 300-dpi figures.
 """
  (out/"RESULTS_AND_DISCUSSION.md").write_text(report)
- meta={"python":platform.python_version(),"pandas":pd.__version__,"numpy":np.__version__,"sklearn":sklearn.__version__,"raw_rows":len(raw),"analysis_rows":n,"train_rows":len(tr),"validation_rows":len(va),"test_rows":len(te),"first_date":str(frame.Date.min().date()),"last_date":str(frame.Date.max().date()),"train_end":str(tr.Date.max().date()),"validation_end":str(va.Date.max().date()),"test_start":str(te.Date.min().date()),"test_end":str(te.Date.max().date()),"target":"log(Close[t+1])-log(Close[t])","forecast_origin":"after close t","features":feats,"graph_selected_features":graph_selected,"graph_model_features":selected,"graph_model_mode":graph_mode,"graph_semantics":"train-only Granger predictive-dependency screen; not structural causality","selected_AR_lag":lag,"AR_validation_MSE":arval,"selected_MLP":best,"MLP_validation_grid":tune,"test_used_for_tuning":False,"directional_accuracy":"non-zero predictions only; coverage also reported","input_sha256":hashlib.sha256(Path(a.data).read_bytes()).hexdigest()}
+ meta={"python":platform.python_version(),"pandas":pd.__version__,"numpy":np.__version__,"sklearn":sklearn.__version__,"raw_rows":len(raw),"analysis_rows":n,"train_rows":len(tr),"validation_rows":len(va),"test_rows":len(te),"first_date":str(frame.Date.min().date()),"last_date":str(frame.Date.max().date()),"train_end":str(tr.Date.max().date()),"validation_end":str(va.Date.max().date()),"test_start":str(te.Date.min().date()),"test_end":str(te.Date.max().date()),"target":"log(Close[t+1])-log(Close[t])","forecast_origin":"after close t","features":feats,"graph_selected_features":graph_selected,"graph_model_features":selected,"graph_model_mode":graph_mode,"graph_semantics":"train-only Granger predictive-dependency screen; not structural causality","selected_AR_lag":lag,"AR_validation_MSE":arval,"selected_MLP":best,"MLP_validation_grid":tune,"test_used_for_tuning":False,"directional_accuracy":"non-zero predictions only; coverage also reported","rolling_origin_graph_selection":"re-estimated from historical data available before each fold; exploratory fallback if no FDR-significant features","forecast_comparison_inference":"Bartlett/Newey-West HAC loss-differential tests, n/(n-1) correction, t(n-1) reference; primary bandwidth 10 and sensitivity bandwidths 0,5,10,20; Holm adjustment within each comparison family","input_sha256":hashlib.sha256(Path(a.data).read_bytes()).hexdigest()}
  (out/"run_metadata.json").write_text(json.dumps(meta,indent=2,default=str))
  print(f"Completed: best test RMSE model {bestrow['model']} ({bestrow['RMSE']:.7g}); selected graph features {len(selected)}")
 if __name__=="__main__": main()
