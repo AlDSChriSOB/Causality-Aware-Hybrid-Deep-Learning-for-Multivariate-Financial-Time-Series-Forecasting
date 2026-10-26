@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/run_robust_experiments.py'
+      - 'scripts/test_graph_screen.py'
       - 'SP500.csv'
       - '.github/workflows/paper2-robust.yml'
   push:
