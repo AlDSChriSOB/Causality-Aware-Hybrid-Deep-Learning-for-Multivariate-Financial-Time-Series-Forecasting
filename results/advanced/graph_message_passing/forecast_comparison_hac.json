@@ -1,0 +1,51 @@
+{
+  "primary_bandwidth": 10,
+  "comparison_family": "four predeclared graph-model comparisons",
+  "loss": "squared error",
+  "interpretation": "Positive mean_loss_difference_A_minus_B means model B has lower squared-error loss than model A.",
+  "comparisons": {
+    "graph_message_passing_vs_no_graph_zero_message": {
+      "mean_loss_difference_A_minus_B": -2.7020750713774775e-06,
+      "statistic": -0.6256515976508605,
+      "p_value": 0.5315810009190481,
+      "n": 3807,
+      "hac_lags": 10,
+      "hac_estimator": "Bartlett/Newey-West with n/(n-1) correction",
+      "reference_distribution": "Student-t, df=n-1",
+      "p_value_holm": 1.0
+    },
+    "graph_message_passing_vs_random_graph_ablation": {
+      "mean_loss_difference_A_minus_B": -6.64176110897163e-08,
+      "statistic": -0.033655624039766734,
+      "p_value": 0.9731535306135797,
+      "n": 3807,
+      "hac_lags": 10,
+      "hac_estimator": "Bartlett/Newey-West with n/(n-1) correction",
+      "reference_distribution": "Student-t, df=n-1",
+      "p_value_holm": 1.0
+    },
+    "graph_message_passing_vs_training_mean_baseline": {
+      "mean_loss_difference_A_minus_B": 5.789167124046775e-06,
+      "statistic": 1.5832624040488488,
+      "p_value": 0.11344475295059213,
+      "n": 3807,
+      "hac_lags": 10,
+      "hac_estimator": "Bartlett/Newey-West with n/(n-1) correction",
+      "reference_distribution": "Student-t, df=n-1",
+      "p_value_holm": 0.4537790118023685
+    },
+    "graph_message_passing_vs_zero_return_baseline": {
+      "mean_loss_difference_A_minus_B": 5.609932545842694e-06,
+      "statistic": 1.5424158506931887,
+      "p_value": 0.12305570715723278,
+      "n": 3807,
+      "hac_lags": 10,
+      "hac_estimator": "Bartlett/Newey-West with n/(n-1) correction",
+      "reference_distribution": "Student-t, df=n-1",
+      "p_value_holm": 0.4537790118023685
+    }
+  },
+  "source_predictions": "test_forecasts.csv; all comparisons use the identical saved test predictions",
+  "graph_selected_edges": 122,
+  "inference_note": "Approximate HAC inference; bandwidth sensitivity should be reported alongside the primary result."
+}

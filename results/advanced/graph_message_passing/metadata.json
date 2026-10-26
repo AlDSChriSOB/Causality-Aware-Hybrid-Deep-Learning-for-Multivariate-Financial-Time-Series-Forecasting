@@ -1,0 +1,11 @@
+{
+  "target": "log(Close[t+1])-log(Close[t])",
+  "graph_estimation": "ordered pairwise Granger tests on initial training partition only",
+  "edge_semantics": "lagged predictive dependence, not structural causation",
+  "multiple_testing": "Bonferroni across lags per ordered pair, then Benjamini-Hochberg across ordered pairs",
+  "test_used_for_tuning": false,
+  "graph_frozen_after_initial_training": true,
+  "selected_edge_count": 122,
+  "edge_fallback_used": false,
+  "input_sha256": "f768ad2989514bf345a458f0a24d37617957f7efc8dbb17247f2779b40b20bea"
+}

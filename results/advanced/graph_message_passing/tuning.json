@@ -1,0 +1,116 @@
+{
+  "graph_message_passing": {
+    "selected_hidden": [
+      16
+    ],
+    "selected_alpha": 0.001,
+    "validation_grid": [
+      {
+        "hidden": [
+          16
+        ],
+        "alpha": 0.001,
+        "validation_MSE": 0.00018225791918105976
+      },
+      {
+        "hidden": [
+          32
+        ],
+        "alpha": 0.001,
+        "validation_MSE": 0.00018996842478648842
+      },
+      {
+        "hidden": [
+          32,
+          16
+        ],
+        "alpha": 0.001,
+        "validation_MSE": 0.00022687093748502128
+      },
+      {
+        "hidden": [
+          32,
+          16
+        ],
+        "alpha": 0.01,
+        "validation_MSE": 0.00023146284907399307
+      }
+    ]
+  },
+  "no_graph_zero_message": {
+    "selected_hidden": [
+      16
+    ],
+    "selected_alpha": 0.001,
+    "validation_grid": [
+      {
+        "hidden": [
+          16
+        ],
+        "alpha": 0.001,
+        "validation_MSE": 0.00018532363555180402
+      },
+      {
+        "hidden": [
+          32
+        ],
+        "alpha": 0.001,
+        "validation_MSE": 0.00018797558502687162
+      },
+      {
+        "hidden": [
+          32,
+          16
+        ],
+        "alpha": 0.001,
+        "validation_MSE": 0.00023660183712376874
+      },
+      {
+        "hidden": [
+          32,
+          16
+        ],
+        "alpha": 0.01,
+        "validation_MSE": 0.0002343408786508727
+      }
+    ]
+  },
+  "random_graph_ablation": {
+    "selected_hidden": [
+      16
+    ],
+    "selected_alpha": 0.001,
+    "validation_grid": [
+      {
+        "hidden": [
+          16
+        ],
+        "alpha": 0.001,
+        "validation_MSE": 0.00018085849609333245
+      },
+      {
+        "hidden": [
+          32
+        ],
+        "alpha": 0.001,
+        "validation_MSE": 0.00018611413617227335
+      },
+      {
+        "hidden": [
+          32,
+          16
+        ],
+        "alpha": 0.001,
+        "validation_MSE": 0.00023147212966170104
+      },
+      {
+        "hidden": [
+          32,
+          16
+        ],
+        "alpha": 0.01,
+        "validation_MSE": 0.00022874786600195622
+      }
+    ]
+  }
+}
