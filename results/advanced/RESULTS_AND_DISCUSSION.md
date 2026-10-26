@@ -1,44 +1,20 @@
-# Paper 2 — Final validated results and conclusion
+# Paper 2 — Automatically generated results snapshot
 
-## Forecast definition and evaluation design
-The forecasting target is the next-trading-day S&P 500 log return, defined as `log(Close[t+1]) - log(Close[t])`. The data are divided chronologically into 11,418 training observations, 3,806 validation observations, and 3,807 untouched test observations. Hyperparameters are selected using chronological training/validation data only; final estimators are refit on the pre-test history and evaluated once on the held-out test period (2010-07-09 to 2025-08-28).
+## Forecast definition and split
+Forecast origin is after the close on date t; target is log(Close[t+1])-log(Close[t]).
+Rows: 11418 training, 3806 validation, 3807 untouched test observations.
+Test period: 2010-07-09 to 2025-08-28. AR order and MLP settings were selected using validation only.
 
-The Granger screen is estimated without access to test observations. Rolling-origin graph selection is re-estimated from the history available before each forecast block. The graph represents lagged predictive dependence and is not interpreted as proof of structural causality.
+## Held-out evidence
+Best RMSE among tested candidates: training_mean (RMSE 0.01093841; MAE 0.007175698; R-squared against test mean -0.0003).
+Full-feature MLP RMSE: 0.01120137. Graph-masked MLP RMSE: 0.01096869. Random-mask MLP RMSE: 0.01096634.
+The graph-masked model's directional accuracy is 0.517 with 100.0% prediction coverage; directional accuracy is descriptive and is not evidence of statistical significance by itself.
 
-## Final graph-informed experiment
-The genuine graph message-passing model uses 122 directed training-only graph edges among 14 input variables. Graph information changes the model input through directed, normalized incoming messages rather than merely masking features. Two matched controls are evaluated: a no-graph zero-message architecture and a random-graph architecture with the same number of edges and the same model family.
+## Evidence-based conclusion
+The tested graph-masked MLP does not establish a reliable forecasting improvement. Its RMSE is 0.01096869, versus 0.01120137 for the unrestricted MLP and 0.01096634 for the random-mask ablation. For the graph-masked versus full-feature squared-error comparison, the primary HAC test gives p=0.1073 and Holm-adjusted p=0.3497; this does not reject equal expected loss at the conventional 5% level. The training_mean baseline has the lowest held-out RMSE among candidates tested. Accordingly, results support a cautious negative/null conclusion: the present experiments do not demonstrate that the Granger-screened feature mask improves next-day S&P 500 return forecasts. They do not establish that graph-informed methods cannot help under other specifications or datasets.
 
-On the untouched 3,807-observation test set:
+## Interpretation and limitations
+The graph screen is estimated only from training data, with Benjamini-Hochberg adjustment across features. FDR-significant selected features: 7. Graph-model mode: FDR-significant feature mask. When no feature passes the adjusted threshold, the one-feature fallback is exploratory and must not be interpreted as a discovered graph edge. The screen tests Granger predictive dependence, not structural causal effects. Forecast comparisons use squared-error loss differentials with a Bartlett/Newey-West HAC variance estimate, finite-sample n/(n-1) correction, and a t(n-1) reference. The primary bandwidth is 10; sensitivity results at bandwidths 0, 5, 10, and 20 are saved separately, with Holm adjustment within each comparison family. These tests are approximate and bandwidth-sensitive inference should be interpreted cautiously. Rolling-origin graph selection is re-estimated from each fold's prior history only; hyperparameters remain fixed from initial validation. Rolling-origin and calendar-regime results are robustness descriptions, not causal estimates. Negative out-of-sample R-squared values for most candidates indicate they do not improve upon the test-mean reference under that metric. Regime-specific differences are descriptive and should not be treated as evidence of a robust regime interaction without an appropriate inferential test.
 
-| Model | RMSE | MAE | R² vs test mean |
-|---|---:|---:|---:|
-| Graph message passing | 0.01119991 | 0.00744418 | -0.04871 |
-| No-graph zero-message | 0.01131990 | 0.00741144 | -0.07130 |
-| Random-graph ablation | 0.01120288 | 0.00740995 | -0.04926 |
-
-The graph message-passing model therefore improves RMSE relative to the no-graph architecture, but its RMSE is essentially indistinguishable from the random-graph control. The random graph also has slightly lower MAE. The negative R² values indicate that none of these graph architectures improves on the test-mean reference under that metric.
-
-## Paired statistical comparison
-The final paired comparisons use the identical saved test predictions in `test_forecasts.csv`. Squared-error loss differences are evaluated with a Bartlett/Newey-West HAC variance estimator at the primary bandwidth of 10, a finite-sample correction, and a Student-t reference distribution. Holm adjustment is applied across the four predeclared graph-model comparisons.
-
-- Graph message passing vs no-graph: mean loss difference A−B = -2.7021e-06, p = 0.5316, Holm-adjusted p = 1.0000.
-- Graph message passing vs random graph: mean loss difference A−B = -6.6418e-08, p = 0.9732, Holm-adjusted p = 1.0000.
-- Graph message passing vs training-mean baseline: mean loss difference A−B = 5.7892e-06, p = 0.1134, Holm-adjusted p = 0.4538.
-- Graph message passing vs zero-return baseline: mean loss difference A−B = 5.6099e-06, p = 0.1231, Holm-adjusted p = 0.4538.
-
-Positive A−B means model A has higher squared-error loss. None of the four comparisons rejects equal expected loss at the conventional 5% level after Holm correction. The graph-vs-random comparison is especially important: the graph topology itself does not provide evidence of a forecasting advantage in this experiment.
-
-## Final conclusion
-The evidence does **not** support the claim that the proposed Granger-informed graph architecture improves next-day S&P 500 return forecasting. Although genuine graph message passing reduces RMSE relative to the matched no-graph architecture (0.01119991 vs 0.01131990), this improvement is not statistically significant (Holm-adjusted p = 1.0000) and disappears when compared with a random graph of identical size (Holm-adjusted p = 1.0000). The training-mean baseline also remains competitive, with the earlier model-selection experiment identifying it as the lowest-RMSE benchmark among the tested candidate models.
-
-Accordingly, the appropriate scientific conclusion is a **null/negative result for graph-specific forecasting improvement under the present design**. The experiments demonstrate that the proposed graph mechanism can be implemented without leakage and can alter the model representation, but they do not establish that the Granger-derived topology contains predictive information that improves out-of-sample return forecasts. This is a substantive result rather than a failed experiment: it shows that a statistically screened predictive-dependence graph should not automatically be assumed to provide useful forecasting structure when embedded in a neural forecasting model.
-
-The result should not be interpreted as evidence that graph-based or causality-informed forecasting is ineffective in general. It is specific to this dataset, target, feature construction, graph-estimation procedure, message-passing design, forecast horizon and evaluation protocol. Granger predictive dependence is also distinct from structural causal effect, so the results cannot establish or refute economic causality.
-
-## Robustness and limitations
-The rolling-origin procedure re-estimates graph selection using only information available before each forecast block, reducing temporal leakage risk. Regime-specific and rolling-origin results should be treated as robustness descriptions rather than causal estimates. Directional accuracy is descriptive and should not be interpreted as evidence of statistical forecasting skill without a corresponding inferential framework.
-
-The HAC inference is approximate and should be accompanied by bandwidth sensitivity results at 0, 5, 10 and 20 lags. The final graph experiment uses a fixed architecture and frozen graph topology after the initial training graph estimation; therefore, future work should examine alternative graph estimators, dynamic graphs, longer temporal contexts, stronger multivariate sequence architectures, and genuinely causal discovery methods before making broader claims.
-
-## Reproducibility outputs
-`test_forecasts.csv` contains the identical saved predictions used for the four paired comparisons. `forecast_comparison_hac.json` contains the primary HAC statistics and Holm-adjusted p-values. `test_metrics.csv`, `feature_graph_edges.csv`, `tuning.json`, rolling-origin outputs and regime outputs provide the remaining experiment record.
+## Outputs
+test_metrics.csv; test_forecasts.csv; training_graph_edges.csv; neural_validation_tuning.csv; rolling_origin_metrics.csv; rolling_origin_graph_screens.csv; regime_metrics.csv; forecast_comparison_tests.json; forecast_comparison_hac_sensitivity.json; three 300-dpi figures.

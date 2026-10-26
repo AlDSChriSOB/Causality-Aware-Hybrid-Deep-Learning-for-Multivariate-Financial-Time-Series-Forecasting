@@ -5,9 +5,9 @@
   "interpretation": "Positive mean_loss_difference_A_minus_B means model B has lower squared-error loss than model A.",
   "comparisons": {
     "graph_message_passing_vs_no_graph_zero_message": {
-      "mean_loss_difference_A_minus_B": -2.7020750713774775e-06,
-      "statistic": -0.6256515976508605,
-      "p_value": 0.5315810009190481,
+      "mean_loss_difference_A_minus_B": -2.702075071377469e-06,
+      "statistic": -0.625651597650859,
+      "p_value": 0.5315810009190491,
       "n": 3807,
       "hac_lags": 10,
       "hac_estimator": "Bartlett/Newey-West with n/(n-1) correction",
@@ -15,9 +15,9 @@
       "p_value_holm": 1.0
     },
     "graph_message_passing_vs_random_graph_ablation": {
-      "mean_loss_difference_A_minus_B": -6.64176110897163e-08,
-      "statistic": -0.033655624039766734,
-      "p_value": 0.9731535306135797,
+      "mean_loss_difference_A_minus_B": -6.641761108970873e-08,
+      "statistic": -0.033655624039762896,
+      "p_value": 0.9731535306135828,
       "n": 3807,
       "hac_lags": 10,
       "hac_estimator": "Bartlett/Newey-West with n/(n-1) correction",
@@ -36,8 +36,8 @@
     },
     "graph_message_passing_vs_zero_return_baseline": {
       "mean_loss_difference_A_minus_B": 5.609932545842694e-06,
-      "statistic": 1.5424158506931887,
-      "p_value": 0.12305570715723278,
+      "statistic": 1.5424158506931882,
+      "p_value": 0.12305570715723285,
       "n": 3807,
       "hac_lags": 10,
       "hac_estimator": "Bartlett/Newey-West with n/(n-1) correction",
