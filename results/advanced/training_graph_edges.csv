@@ -1,0 +1,15 @@
+feature,min_p,fdr_q,selected
+ret_lag_1,1.0,1.0,True
+ret_lag_2,1.0,1.0,False
+ret_lag_3,1.0,1.0,False
+ret_lag_5,1.0,1.0,False
+ret_lag_10,1.0,1.0,False
+ret_lag_20,1.0,1.0,False
+range_scaled,1.0,1.0,False
+open_close_return,1.0,1.0,False
+overnight_gap,1.0,1.0,False
+volatility_5,1.0,1.0,False
+volatility_20,1.0,1.0,False
+volatility_60,1.0,1.0,False
+log_volume_change,1.0,1.0,False
+rsi14,1.0,1.0,False
