@@ -7,6 +7,7 @@ on:
       - 'scripts/test_graph_screen.py'
       - 'scripts/run_graph_message_passing.py'
       - 'scripts/test_graph_message_passing.py'
+      - 'scripts/regenerate_graph_comparisons.py'
       - 'SP500.csv'
       - '.github/workflows/paper2-robust.yml'
   push:
@@ -16,9 +17,9 @@ on:
       - 'scripts/test_graph_screen.py'
       - 'scripts/run_graph_message_passing.py'
       - 'scripts/test_graph_message_passing.py'
+      - 'scripts/regenerate_graph_comparisons.py'
       - '.github/workflows/paper2-robust.yml'
       - 'SP500.csv'
-      - '.github/workflows/paper2-robust.yml'
   workflow_dispatch:
 permissions:
   contents: write
@@ -45,13 +46,15 @@ jobs:
         run: python scripts/run_robust_experiments.py --data SP500.csv --out results/advanced
       - name: Run graph message-passing experiment and matched ablations
         run: python scripts/run_graph_message_passing.py --data SP500.csv --out results/advanced/graph_message_passing
+      - name: Regenerate identical test forecasts and four paired HAC comparisons
+        run: python scripts/regenerate_graph_comparisons.py --data SP500.csv --out results/advanced/graph_message_passing
       - name: Commit experiment results
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add results/advanced/
           if ! git diff --cached --quiet; then
-            git commit -m "Add robust Paper 2 forecast results"
+            git commit -m "Add paired HAC graph forecast comparisons"
             git push origin research/validated-forecast-pipeline
           fi
       - name: Upload result bundle
