@@ -61,7 +61,8 @@ def graph_screen(train,features,maxlag=5):
     raise ValueError("constant target or feature")
    # statsmodels tests whether column 2 Granger-predicts column 1.
    # Do not pass verbose: it was removed in statsmodels 0.15.
-   with warnings.catch_warnings():
+   import contextlib,io
+   with warnings.catch_warnings(), contextlib.redirect_stdout(io.StringIO()):
     warnings.simplefilter("ignore")
     res=grangercausalitytests(pair,maxlag=maxlag)
    lag_p=[float(res[k][0]["ssr_ftest"][1]) for k in range(1,maxlag+1)]
