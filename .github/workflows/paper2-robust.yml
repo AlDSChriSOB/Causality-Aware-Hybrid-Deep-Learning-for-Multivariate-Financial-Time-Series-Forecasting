@@ -11,6 +11,8 @@ on:
     branches: [research/validated-forecast-pipeline]
     paths:
       - 'scripts/run_robust_experiments.py'
+      - 'scripts/test_graph_screen.py'
+      - '.github/workflows/paper2-robust.yml'
       - 'SP500.csv'
       - '.github/workflows/paper2-robust.yml'
   workflow_dispatch:
