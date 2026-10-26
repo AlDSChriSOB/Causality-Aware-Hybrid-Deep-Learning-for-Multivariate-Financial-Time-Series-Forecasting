@@ -83,7 +83,7 @@ def main():
  arval={}
  for lag in [1,2,5,10]:
   try:
-   fit=AutoReg(tr.target,lags=lag,trend="c",old_names=False).fit()
+   fit=AutoReg(tr.target,lags=lag,trend="c").fit()
    arval[lag]=float(mean_squared_error(vy,fit.predict(start=len(tr),end=len(tr)+len(va)-1,dynamic=False)))
   except Exception: pass
  lag=min(arval,key=arval.get) if arval else 1
@@ -95,7 +95,7 @@ def main():
  full=mlp(hidden,alpha).fit(X,y); gm=mlp(hidden,alpha).fit(X[selected],y)
  ridge=make_pipeline(StandardScaler(),Ridge(alpha=1.)).fit(X,y)
  rf=RandomForestRegressor(n_estimators=300,min_samples_leaf=10,max_features=.8,random_state=42,n_jobs=-1).fit(X,y)
- tv=pd.concat([tr,va]); ar=AutoReg(tv.target,lags=lag,trend="c",old_names=False).fit()
+ tv=pd.concat([tr,va]); ar=AutoReg(tv.target,lags=lag,trend="c").fit()
  preds={"zero_return":np.zeros(len(te)),"training_mean":np.full(len(te),y.mean()),
  "AR_selected":np.asarray(ar.predict(start=len(tv),end=len(tv)+len(te)-1,dynamic=False)),
  "ridge":ridge.predict(T),"random_forest":rf.predict(T),"MLP_full_features":full.predict(T),"MLP_graph_masked":gm.predict(T[selected])}
