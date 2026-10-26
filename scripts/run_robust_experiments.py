@@ -54,7 +54,7 @@ def graph_screen(train,features):
   rows.append({"feature":col,"min_p":pv})
  q=bh([r["min_p"] for r in rows])
  for r,v in zip(rows,q): r["fdr_q"]=float(v); r["selected"]=bool(v<.05)
- if not any(r["selected"] for r in rows): rows[int(np.argmin(q))]["selected"]=True
+ # Do not force a non-significant feature to appear as a discovered graph edge.
  return pd.DataFrame(rows)
 
 def met(y,p):
@@ -78,6 +78,8 @@ def main():
  out=Path(a.out); out.mkdir(parents=True,exist_ok=True); frame,raw=build(pd.read_csv(a.data))
  n=len(frame); i=int(.6*n); j=int(.8*n); tr,va,te=frame.iloc[:i],frame.iloc[i:j],frame.iloc[j:]
  feats=[c for c in frame if c not in ["Date","target"]]; X,y=tr[feats],tr.target.to_numpy(); V,vy=va[feats],va.target.to_numpy(); T,ty=te[feats],te.target.to_numpy()
+ # Scale the neural target using training data only; invert predictions to return units.
+ y_scaler=StandardScaler().fit(y.reshape(-1,1)); ys=y_scaler.transform(y.reshape(-1,1)).ravel()
  # Tune AR lag order using validation only; dynamic=False gives one-step rolling predictions.
  from statsmodels.tsa.ar_model import AutoReg
  arval={}
@@ -89,17 +91,24 @@ def main():
  lag=min(arval,key=arval.get) if arval else 1
  configs=[((16,),.001),((32,),.001),((32,16),.001),((32,16),.01)]; tune=[]
  for h,alpha in configs:
-  m=mlp(h,alpha); m.fit(X,y); tune.append({"hidden":list(h),"alpha":alpha,"validation_MSE":float(mean_squared_error(vy,m.predict(V)))})
+  m=mlp(h,alpha); m.fit(X,ys); pv=y_scaler.inverse_transform(m.predict(V).reshape(-1,1)).ravel(); tune.append({"hidden":list(h),"alpha":alpha,"validation_MSE":float(mean_squared_error(vy,pv))})
  best=min(tune,key=lambda z:z["validation_MSE"]); hidden=tuple(best["hidden"]); alpha=best["alpha"]
- graph=graph_screen(tr,feats); selected=graph.loc[graph.selected,"feature"].tolist()
- full=mlp(hidden,alpha).fit(X,y); gm=mlp(hidden,alpha).fit(X[selected],y)
+ graph=graph_screen(tr,feats); graph_selected=graph.loc[graph.selected,"feature"].tolist()
+ # If the screen has no FDR-significant edges, retain a clearly labelled exploratory
+ # minimum-q feature subset for diagnostic comparison; it is not a discovered causal graph.
+ selected=graph_selected if graph_selected else [str(graph.sort_values(["fdr_q","min_p"]).iloc[0]["feature"])]
+ graph_mode="FDR-significant feature mask" if graph_selected else "exploratory fallback: no FDR-significant features"
+ full=mlp(hidden,alpha).fit(X,ys); gm=mlp(hidden,alpha).fit(X[selected],ys)
  ridge=make_pipeline(StandardScaler(),Ridge(alpha=1.)).fit(X,y)
  rf=RandomForestRegressor(n_estimators=300,min_samples_leaf=10,max_features=.8,random_state=42,n_jobs=-1).fit(X,y)
  tv=pd.concat([tr,va]); ar=AutoReg(tv.target,lags=lag,trend="c").fit()
+ rng=np.random.default_rng(42); rnd=list(rng.choice(feats,size=len(selected),replace=False)); rn=mlp(hidden,alpha).fit(X[rnd],ys)
  preds={"zero_return":np.zeros(len(te)),"training_mean":np.full(len(te),y.mean()),
  "AR_selected":np.asarray(ar.predict(start=len(tv),end=len(tv)+len(te)-1,dynamic=False)),
- "ridge":ridge.predict(T),"random_forest":rf.predict(T),"MLP_full_features":full.predict(T),"MLP_graph_masked":gm.predict(T[selected])}
- rng=np.random.default_rng(42); rnd=list(rng.choice(feats,size=len(selected),replace=False)); rn=mlp(hidden,alpha).fit(X[rnd],y); preds["MLP_random_mask_ablation"]=rn.predict(T[rnd])
+ "ridge":ridge.predict(T),"random_forest":rf.predict(T),
+ "MLP_full_features":y_scaler.inverse_transform(full.predict(T).reshape(-1,1)).ravel(),
+ "MLP_graph_masked":y_scaler.inverse_transform(gm.predict(T[selected]).reshape(-1,1)).ravel(),
+ "MLP_random_mask_ablation":y_scaler.inverse_transform(rn.predict(T[rnd]).reshape(-1,1)).ravel()}
  rows=[]
  for name,p in preds.items(): rows.append({"model":name,"features_used":len(selected) if "graph_masked" in name else len(rnd) if "random_mask" in name else len(feats),**met(ty,p)})
  pd.DataFrame(rows).to_csv(out/"test_metrics.csv",index=False); graph.to_csv(out/"training_graph_edges.csv",index=False); pd.DataFrame(tune).to_csv(out/"neural_validation_tuning.csv",index=False)
@@ -111,7 +120,12 @@ def main():
   hist=frame.iloc[:int(idx[0])]; block=frame.iloc[idx]; xx=hist[feats]; yy=hist.target.to_numpy(); xt=block[feats]; yt=block.target.to_numpy()
   for name,cols in [("ridge",feats),("MLP_full_features",feats),("MLP_graph_masked",selected)]:
    model=make_pipeline(StandardScaler(),Ridge(alpha=1.)) if name=="ridge" else mlp(hidden,alpha)
-   model.fit(xx[cols],yy); rolls.append({"fold":fold,"start":str(block.Date.iloc[0].date()),"end":str(block.Date.iloc[-1].date()),"model":name,**met(yt,model.predict(xt[cols]))})
+   if name=="ridge":
+    model.fit(xx[cols],yy); pp=model.predict(xt[cols])
+   else:
+    ys_fold=StandardScaler().fit(yy.reshape(-1,1)); model.fit(xx[cols],ys_fold.transform(yy.reshape(-1,1)).ravel())
+    pp=ys_fold.inverse_transform(model.predict(xt[cols]).reshape(-1,1)).ravel()
+   rolls.append({"fold":fold,"start":str(block.Date.iloc[0].date()),"end":str(block.Date.iloc[-1].date()),"model":name,**met(yt,pp)})
  pd.DataFrame(rolls).to_csv(out/"rolling_origin_metrics.csv",index=False)
  regs=[]
  for start,end,label in [("2010-07-09","2019-12-31","pre-COVID"),("2020-01-01","2021-12-31","COVID-era"),("2022-01-01","2025-12-31","recent")]:
@@ -140,13 +154,13 @@ Full-feature MLP RMSE: {fullrow['RMSE']:.7g}. Graph-masked MLP RMSE: {grow['RMSE
 Consult test_metrics.csv, test_forecasts.csv and forecast_comparison_tests.json for the complete measured results.
 
 ## Interpretation
-The graph is estimated only from training data, with Benjamini-Hochberg adjustment across features, and masks inputs to the MLP; therefore it changes model computation. The screen detects Granger predictive dependence, not structural causal effects. Forecast comparison p-values use a HAC-normal approximation and are preliminary; multiple comparisons are not adjusted. Rolling-origin and calendar-regime results are robustness descriptions, not causal estimates. Directional accuracy excludes exactly zero predictions and reports coverage separately.
+The graph screen is estimated only from training data, with Benjamini-Hochberg adjustment across features. FDR-significant selected features: {len(graph_selected)}. Graph-model mode: {graph_mode}. When no feature passes the adjusted threshold, the one-feature fallback is exploratory and must not be interpreted as a discovered graph edge. The screen tests Granger predictive dependence, not structural causal effects. Forecast comparison p-values use a HAC-normal approximation and are preliminary; multiple comparisons are not adjusted. Rolling-origin and calendar-regime results are robustness descriptions, not causal estimates. Directional accuracy excludes exactly zero predictions and reports coverage separately.
 
 ## Outputs
 test_metrics.csv; test_forecasts.csv; training_graph_edges.csv; neural_validation_tuning.csv; rolling_origin_metrics.csv; regime_metrics.csv; forecast_comparison_tests.json; three 300-dpi figures.
 """
  (out/"RESULTS_AND_DISCUSSION.md").write_text(report)
- meta={"python":platform.python_version(),"pandas":pd.__version__,"numpy":np.__version__,"sklearn":sklearn.__version__,"raw_rows":len(raw),"analysis_rows":n,"train_rows":len(tr),"validation_rows":len(va),"test_rows":len(te),"first_date":str(frame.Date.min().date()),"last_date":str(frame.Date.max().date()),"train_end":str(tr.Date.max().date()),"validation_end":str(va.Date.max().date()),"test_start":str(te.Date.min().date()),"test_end":str(te.Date.max().date()),"target":"log(Close[t+1])-log(Close[t])","forecast_origin":"after close t","features":feats,"graph_selected_features":selected,"graph_semantics":"train-only Granger predictive-dependency screen; not structural causality","selected_AR_lag":lag,"AR_validation_MSE":arval,"selected_MLP":best,"MLP_validation_grid":tune,"test_used_for_tuning":False,"directional_accuracy":"non-zero predictions only; coverage also reported","input_sha256":hashlib.sha256(Path(a.data).read_bytes()).hexdigest()}
+ meta={"python":platform.python_version(),"pandas":pd.__version__,"numpy":np.__version__,"sklearn":sklearn.__version__,"raw_rows":len(raw),"analysis_rows":n,"train_rows":len(tr),"validation_rows":len(va),"test_rows":len(te),"first_date":str(frame.Date.min().date()),"last_date":str(frame.Date.max().date()),"train_end":str(tr.Date.max().date()),"validation_end":str(va.Date.max().date()),"test_start":str(te.Date.min().date()),"test_end":str(te.Date.max().date()),"target":"log(Close[t+1])-log(Close[t])","forecast_origin":"after close t","features":feats,"graph_selected_features":graph_selected,"graph_model_features":selected,"graph_model_mode":graph_mode,"graph_semantics":"train-only Granger predictive-dependency screen; not structural causality","selected_AR_lag":lag,"AR_validation_MSE":arval,"selected_MLP":best,"MLP_validation_grid":tune,"test_used_for_tuning":False,"directional_accuracy":"non-zero predictions only; coverage also reported","input_sha256":hashlib.sha256(Path(a.data).read_bytes()).hexdigest()}
  (out/"run_metadata.json").write_text(json.dumps(meta,indent=2,default=str))
  print(f"Completed: best test RMSE model {bestrow['model']} ({bestrow['RMSE']:.7g}); selected graph features {len(selected)}")
 if __name__=="__main__": main()
